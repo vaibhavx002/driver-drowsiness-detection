@@ -25,45 +25,31 @@ if not os.path.exists(MODEL_PATH):
     print("✅ Model ready at:", MODEL_PATH)
 
 # -----------------------------
-# DLIB FACE + LANDMARK PREDICTOR
+# FACE + LANDMARK DETECTION
 # -----------------------------
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(MODEL_PATH)
 
-# -----------------------------
-# EYE ASPECT RATIO FUNCTION
-# -----------------------------
 def eye_aspect_ratio(eye):
     A = dist.euclidean(eye[1], eye[5])
     B = dist.euclidean(eye[2], eye[4])
     C = dist.euclidean(eye[0], eye[3])
-    ear = (A + B) / (2.0 * C)
-    return ear
+    return (A + B) / (2.0 * C)
 
-# -----------------------------
-# SOUND ALERT (BEEP)
-# -----------------------------
 def play_beep():
     try:
-        tone = AudioSegment.sine(frequency=1200, duration=700)
+        tone = AudioSegment.sine(frequency=1000, duration=700)
         play(tone)
     except Exception as e:
-        print("⚠️ Sound error:", e)
+        print("Beep sound error:", e)
 
-# -----------------------------
-# DROWSINESS DETECTION VARIABLES
-# -----------------------------
 EYE_AR_THRESH = 0.23
 EYE_AR_CONSEC_FRAMES = 12
 COUNTER = 0
 ALARM_ON = False
 
-# -----------------------------
-# DROWSINESS DETECTION FUNCTION
-# -----------------------------
 def detect_drowsiness(frame):
     global COUNTER, ALARM_ON
-
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = detector(gray)
 
@@ -73,10 +59,8 @@ def detect_drowsiness(frame):
     for face in faces:
         landmarks = predictor(gray, face)
         landmarks_points = np.array([[p.x, p.y] for p in landmarks.parts()])
-
         left_eye = landmarks_points[36:42]
         right_eye = landmarks_points[42:48]
-
         left_ear = eye_aspect_ratio(left_eye)
         right_ear = eye_aspect_ratio(right_eye)
         ear = (left_ear + right_ear) / 2.0
@@ -93,15 +77,11 @@ def detect_drowsiness(frame):
             COUNTER = 0
             ALARM_ON = False
 
-        # Overlay status on the webcam frame
         cv2.putText(frame, status, (40, 60), cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
-        break  # process only the first face for efficiency
+        break
 
     return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-# -----------------------------
-# GRADIO LIVE INTERFACE
-# -----------------------------
 def process_video(frame):
     if frame is None:
         return None
@@ -113,10 +93,9 @@ demo = gr.Interface(
     outputs=gr.Image(label="Drowsiness Detection"),
     live=True,
     title="🚗 Real-Time Driver Drowsiness Detection",
-    description="AI-powered system that detects if a driver is falling asleep using facial landmarks and eye aspect ratio.",
+    description="AI-powered system that detects driver drowsiness using webcam input.",
 )
 
-# -----------------------------
-# FASTAPI APP FOR RENDER DEPLOYMENT
-# -----------------------------
-app = demo.to_fastapi()
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 7860))
+    demo.launch(server_name="0.0.0.0", server_port=port)
