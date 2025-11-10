@@ -9,10 +9,9 @@ import threading
 import urllib.request
 import bz2
 import gradio as gr
-import uvicorn
 
 # -----------------------------
-# Setup model path and download if missing
+# MODEL SETUP
 # -----------------------------
 MODEL_PATH = "Files/shape_predictor_68_face_landmarks.dat"
 MODEL_URL = "http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2"
@@ -26,13 +25,13 @@ if not os.path.exists(MODEL_PATH):
     print("✅ Model ready at:", MODEL_PATH)
 
 # -----------------------------
-# Load Dlib Face Detector + Landmark Predictor
+# DLIB FACE + LANDMARK PREDICTOR
 # -----------------------------
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(MODEL_PATH)
 
 # -----------------------------
-# Eye Aspect Ratio (EAR)
+# EYE ASPECT RATIO FUNCTION
 # -----------------------------
 def eye_aspect_ratio(eye):
     A = dist.euclidean(eye[1], eye[5])
@@ -42,28 +41,32 @@ def eye_aspect_ratio(eye):
     return ear
 
 # -----------------------------
-# Beep alert
+# SOUND ALERT (BEEP)
 # -----------------------------
 def play_beep():
     try:
-        tone = AudioSegment.sine(frequency=1000, duration=800)
+        tone = AudioSegment.sine(frequency=1200, duration=700)
         play(tone)
     except Exception as e:
-        print("Beep error:", e)
+        print("⚠️ Sound error:", e)
 
 # -----------------------------
-# Drowsiness Detection Logic
+# DROWSINESS DETECTION VARIABLES
 # -----------------------------
 EYE_AR_THRESH = 0.23
 EYE_AR_CONSEC_FRAMES = 12
 COUNTER = 0
 ALARM_ON = False
 
+# -----------------------------
+# DROWSINESS DETECTION FUNCTION
+# -----------------------------
 def detect_drowsiness(frame):
     global COUNTER, ALARM_ON
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = detector(gray)
+
     status = "Awake 😃"
     color = (0, 255, 0)
 
@@ -73,6 +76,7 @@ def detect_drowsiness(frame):
 
         left_eye = landmarks_points[36:42]
         right_eye = landmarks_points[42:48]
+
         left_ear = eye_aspect_ratio(left_eye)
         right_ear = eye_aspect_ratio(right_eye)
         ear = (left_ear + right_ear) / 2.0
@@ -89,34 +93,30 @@ def detect_drowsiness(frame):
             COUNTER = 0
             ALARM_ON = False
 
+        # Overlay status on the webcam frame
         cv2.putText(frame, status, (40, 60), cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
-        break
+        break  # process only the first face for efficiency
 
     return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
+# -----------------------------
+# GRADIO LIVE INTERFACE
+# -----------------------------
 def process_video(frame):
     if frame is None:
         return None
     return detect_drowsiness(frame)
 
-# -----------------------------
-# Gradio App
-# -----------------------------
 demo = gr.Interface(
     fn=process_video,
-    inputs=gr.Image(sources="webcam", streaming=True, label="🚘 Live Monitoring Feed"),
+    inputs=gr.Image(sources="webcam", streaming=True, label="🚘 Live Driver Monitoring"),
     outputs=gr.Image(label="Drowsiness Detection"),
     live=True,
-    title="🚗 Driver Drowsiness Detection System",
-    description="Real-time monitoring using facial landmarks & EAR method with alert beep when drowsiness detected.",
+    title="🚗 Real-Time Driver Drowsiness Detection",
+    description="AI-powered system that detects if a driver is falling asleep using facial landmarks and eye aspect ratio.",
 )
 
 # -----------------------------
-# Serve with Uvicorn for Render
+# FASTAPI APP FOR RENDER DEPLOYMENT
 # -----------------------------
 app = demo.to_fastapi()
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 7860))
-    print(f"🚀 Starting FastAPI server on port {port}")
-    uvicorn.run(app, host="0.0.0.0", port=port)
