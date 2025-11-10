@@ -39,7 +39,7 @@ def eye_aspect_ratio(eye):
     return ear
 
 # -----------------------------
-# Drowsiness Detection Logic
+# Drowsiness Detection
 # -----------------------------
 def detect_drowsiness(frame):
     if frame is None:
@@ -79,14 +79,11 @@ demo = gr.Interface(
     inputs=gr.Image(sources="webcam", streaming=True, label="Live Driver Feed"),
     outputs=gr.Image(label="Drowsiness Detection"),
     title="🚗 Driver Drowsiness Detection (Live)",
-    description=(
-        "Monitors live webcam feed to detect if the driver is drowsy or asleep. "
-        "Uses eye aspect ratio and facial landmarks via Dlib."
-    ),
+    description="Detects driver drowsiness from live webcam feed using Dlib facial landmarks."
 )
 
 # -----------------------------
-# Launch App (for local + Render)
+# Launch App (Render Compatible)
 # -----------------------------
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 7860))
