@@ -2,13 +2,14 @@ import os
 import cv2
 import dlib
 import numpy as np
-import gradio as gr
 from scipy.spatial import distance as dist
 from pydub import AudioSegment
 from pydub.playback import play
 import threading
 import urllib.request
 import bz2
+import gradio as gr
+import uvicorn
 
 # -----------------------------
 # Setup model path and download if missing
@@ -31,7 +32,7 @@ detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(MODEL_PATH)
 
 # -----------------------------
-# Eye Aspect Ratio (EAR) function
+# Eye Aspect Ratio (EAR)
 # -----------------------------
 def eye_aspect_ratio(eye):
     A = dist.euclidean(eye[1], eye[5])
@@ -41,11 +42,10 @@ def eye_aspect_ratio(eye):
     return ear
 
 # -----------------------------
-# Beep alert for drowsiness
+# Beep alert
 # -----------------------------
 def play_beep():
     try:
-        # Simple 1kHz tone
         tone = AudioSegment.sine(frequency=1000, duration=800)
         play(tone)
     except Exception as e:
@@ -55,7 +55,7 @@ def play_beep():
 # Drowsiness Detection Logic
 # -----------------------------
 EYE_AR_THRESH = 0.23
-EYE_AR_CONSEC_FRAMES = 12  # Adjust for sensitivity (12 ≈ 0.6s if 20 FPS)
+EYE_AR_CONSEC_FRAMES = 12
 COUNTER = 0
 ALARM_ON = False
 
@@ -90,20 +90,17 @@ def detect_drowsiness(frame):
             ALARM_ON = False
 
         cv2.putText(frame, status, (40, 60), cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
-        break  # Only first face for better performance
+        break
 
     return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-# -----------------------------
-# Frame processing function
-# -----------------------------
 def process_video(frame):
     if frame is None:
         return None
     return detect_drowsiness(frame)
 
 # -----------------------------
-# Gradio Interface
+# Gradio App
 # -----------------------------
 demo = gr.Interface(
     fn=process_video,
@@ -115,15 +112,11 @@ demo = gr.Interface(
 )
 
 # -----------------------------
-# Render Deployment Entry Point
+# Serve with Uvicorn for Render
 # -----------------------------
+app = demo.to_fastapi()
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 7860))  # Render dynamically assigns a port
-    print(f"🚀 Starting app on port {port}")
-    demo.launch(
-        server_name="0.0.0.0",
-        server_port=port,
-        show_error=True,
-        share=False,
-        prevent_thread_lock=True  # Critical for Render to detect open port
-    )
+    port = int(os.environ.get("PORT", 7860))
+    print(f"🚀 Starting FastAPI server on port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port)
