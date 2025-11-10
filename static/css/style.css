@@ -1,0 +1,12 @@
+body {
+  background: linear-gradient(to right, #ff6a00, #ee0979);
+  color: white;
+  font-family: 'Poppins', sans-serif;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+h1 {
+  font-size: 2.5rem;
+  margin-top: 30px;
+}
