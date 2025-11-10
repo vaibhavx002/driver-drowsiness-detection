@@ -45,7 +45,8 @@ def eye_aspect_ratio(eye):
 # -----------------------------
 def play_beep():
     try:
-        tone = AudioSegment.sine(frequency=1000, duration=800)  # 1kHz beep
+        # Simple 1kHz tone
+        tone = AudioSegment.sine(frequency=1000, duration=800)
         play(tone)
     except Exception as e:
         print("Beep error:", e)
@@ -54,7 +55,7 @@ def play_beep():
 # Drowsiness Detection Logic
 # -----------------------------
 EYE_AR_THRESH = 0.23
-EYE_AR_CONSEC_FRAMES = 12  # around 0.6s if ~20 FPS
+EYE_AR_CONSEC_FRAMES = 12  # Adjust for sensitivity (12 ≈ 0.6s if 20 FPS)
 COUNTER = 0
 ALARM_ON = False
 
@@ -89,7 +90,7 @@ def detect_drowsiness(frame):
             ALARM_ON = False
 
         cv2.putText(frame, status, (40, 60), cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
-        break  # process first detected face only for speed
+        break  # Only first face for better performance
 
     return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -106,16 +107,23 @@ def process_video(frame):
 # -----------------------------
 demo = gr.Interface(
     fn=process_video,
-    inputs=gr.Image(sources="webcam", streaming=True, label="Live Monitoring"),
+    inputs=gr.Image(sources="webcam", streaming=True, label="🚘 Live Monitoring Feed"),
     outputs=gr.Image(label="Drowsiness Detection"),
     live=True,
-    title="🚗 Driver Drowsiness Detection (Live)",
-    description="Real-time detection of driver drowsiness using facial landmarks & EAR with alert beeps.",
+    title="🚗 Driver Drowsiness Detection System",
+    description="Real-time monitoring using facial landmarks & EAR method with alert beep when drowsiness detected.",
 )
 
 # -----------------------------
 # Render Deployment Entry Point
 # -----------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 7860))  # Required for Render to detect the port
-    demo.launch(server_name="0.0.0.0", server_port=port)
+    port = int(os.environ.get("PORT", 7860))  # Render dynamically assigns a port
+    print(f"🚀 Starting app on port {port}")
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=port,
+        show_error=True,
+        share=False,
+        prevent_thread_lock=True  # Critical for Render to detect open port
+    )
