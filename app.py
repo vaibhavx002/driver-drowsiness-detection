@@ -1,15 +1,17 @@
+import os
 import cv2
 import dlib
 import numpy as np
 import gradio as gr
-import os
-import urllib.request
 from scipy.spatial import distance as dist
-import platform
+from pydub import AudioSegment
+from pydub.playback import play
 import threading
+import urllib.request
+import bz2
 
 # -----------------------------
-# Model Setup
+# Setup model path and download if missing
 # -----------------------------
 MODEL_PATH = "Files/shape_predictor_68_face_landmarks.dat"
 MODEL_URL = "http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2"
@@ -18,136 +20,102 @@ if not os.path.exists(MODEL_PATH):
     os.makedirs("Files", exist_ok=True)
     print("🔽 Downloading dlib facial landmark model (~100MB compressed)...")
     urllib.request.urlretrieve(MODEL_URL, "Files/shape_predictor_68_face_landmarks.dat.bz2")
-    import bz2
     with bz2.BZ2File("Files/shape_predictor_68_face_landmarks.dat.bz2") as fr, open(MODEL_PATH, "wb") as fw:
         fw.write(fr.read())
     print("✅ Model ready at:", MODEL_PATH)
 
 # -----------------------------
-# Parameters
+# Load Dlib Face Detector + Landmark Predictor
 # -----------------------------
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(MODEL_PATH)
 
-EYE_AR_THRESH_DROWSY = 0.26
-EYE_AR_THRESH_SLEEP = 0.21
-EYE_AR_CONSEC_FRAMES_DROWSY = 12
-EYE_AR_CONSEC_FRAMES_SLEEP = 25
-
-frame_counter = 0
-frame_skip = 2
-_frame_index = 0
-
 # -----------------------------
-# Optional Beep (for local use)
-# -----------------------------
-def _beep_async():
-    try:
-        if platform.system() == "Windows":
-            import winsound; winsound.Beep(1000, 600)
-        else:
-            os.system('afplay /System/Library/Sounds/Ping.aiff >/dev/null 2>&1 &')
-    except Exception:
-        pass
-
-# -----------------------------
-# Helper Functions
+# Eye Aspect Ratio (EAR) function
 # -----------------------------
 def eye_aspect_ratio(eye):
     A = dist.euclidean(eye[1], eye[5])
     B = dist.euclidean(eye[2], eye[4])
     C = dist.euclidean(eye[0], eye[3])
-    return (A + B) / (2.0 * C)
+    ear = (A + B) / (2.0 * C)
+    return ear
 
-def detect_drowsiness(frame_bgr):
-    global frame_counter
-    gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
-    gray = cv2.equalizeHist(gray)
+# -----------------------------
+# Beep alert for drowsiness
+# -----------------------------
+def play_beep():
+    try:
+        tone = AudioSegment.sine(frequency=1000, duration=800)  # 1kHz beep
+        play(tone)
+    except Exception as e:
+        print("Beep error:", e)
 
+# -----------------------------
+# Drowsiness Detection Logic
+# -----------------------------
+EYE_AR_THRESH = 0.23
+EYE_AR_CONSEC_FRAMES = 12  # around 0.6s if ~20 FPS
+COUNTER = 0
+ALARM_ON = False
+
+def detect_drowsiness(frame):
+    global COUNTER, ALARM_ON
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = detector(gray)
     status = "Awake 😃"
-    status_color = (0, 200, 0)
-    alert_active = False
+    color = (0, 255, 0)
 
     for face in faces:
         landmarks = predictor(gray, face)
-        pts = np.array([[p.x, p.y] for p in landmarks.parts()], dtype=np.int32)
-        left_eye  = pts[36:42]
-        right_eye = pts[42:48]
-        left_ear  = eye_aspect_ratio(left_eye)
+        landmarks_points = np.array([[p.x, p.y] for p in landmarks.parts()])
+
+        left_eye = landmarks_points[36:42]
+        right_eye = landmarks_points[42:48]
+        left_ear = eye_aspect_ratio(left_eye)
         right_ear = eye_aspect_ratio(right_eye)
         ear = (left_ear + right_ear) / 2.0
 
-        cv2.polylines(frame_bgr, [left_eye],  True, (0, 255, 255), 1)
-        cv2.polylines(frame_bgr, [right_eye], True, (0, 255, 255), 1)
-
-        if ear < EYE_AR_THRESH_DROWSY:
-            frame_counter += 1
+        if ear < EYE_AR_THRESH:
+            COUNTER += 1
+            if COUNTER >= EYE_AR_CONSEC_FRAMES:
+                status = "Drowsy 💤"
+                color = (0, 0, 255)
+                if not ALARM_ON:
+                    ALARM_ON = True
+                    threading.Thread(target=play_beep, daemon=True).start()
         else:
-            frame_counter = 0
+            COUNTER = 0
+            ALARM_ON = False
 
-        if frame_counter >= EYE_AR_CONSEC_FRAMES_SLEEP:
-            status = "Sleeping 😴"
-            status_color = (0, 0, 150)
-            alert_active = True
-        elif frame_counter >= EYE_AR_CONSEC_FRAMES_DROWSY:
-            status = "Drowsy 💤"
-            status_color = (0, 0, 255)
-            alert_active = True
+        cv2.putText(frame, status, (40, 60), cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
+        break  # process first detected face only for speed
 
-        cv2.putText(frame_bgr, f"Status: {status}", (20, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, status_color, 3)
-        cv2.putText(frame_bgr, f"EAR: {ear:.2f}", (20, 95),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+    return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    cv2.putText(frame_bgr, "LIVE", (frame_bgr.shape[1]-120, 50),
-                cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,255,0), 3)
-
-    if alert_active:
-        cv2.rectangle(frame_bgr, (0,0), (frame_bgr.shape[1], frame_bgr.shape[0]), (0,0,255), 50)
-        cv2.putText(frame_bgr, "⚠ ALERT: DRIVER DROWSY", (40,150),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255,255,255), 4)
-        threading.Thread(target=_beep_async, daemon=True).start()
-
-    return frame_bgr
-
-def process_stream(frame_rgb):
-    global _frame_index
-    if frame_rgb is None:
+# -----------------------------
+# Frame processing function
+# -----------------------------
+def process_video(frame):
+    if frame is None:
         return None
-    _frame_index += 1
-    if _frame_index % frame_skip != 0:
-        return frame_rgb
-    frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
-    out_bgr = detect_drowsiness(frame_bgr)
-    return cv2.cvtColor(out_bgr, cv2.COLOR_BGR2RGB)
+    return detect_drowsiness(frame)
 
 # -----------------------------
 # Gradio Interface
 # -----------------------------
-with gr.Blocks(title="🚗 Driver Drowsiness Detection") as demo:
-    gr.Markdown(
-        """
-        # 🚗 Driver Drowsiness Detection  
-        Real-time **live monitoring** optimized for desktop and mobile webcams.
-        """
-    )
-
-    webcam = gr.Image(
-        sources=["webcam"],
-        streaming=True,
-        label="Live Driver Monitor Feed",
-        image_mode="RGB",
-        height=320,
-        width=480
-    )
-
-    webcam.stream(fn=process_stream, inputs=webcam, outputs=webcam)
+demo = gr.Interface(
+    fn=process_video,
+    inputs=gr.Image(sources="webcam", streaming=True, label="Live Monitoring"),
+    outputs=gr.Image(label="Drowsiness Detection"),
+    live=True,
+    title="🚗 Driver Drowsiness Detection (Live)",
+    description="Real-time detection of driver drowsiness using facial landmarks & EAR with alert beeps.",
+)
 
 # -----------------------------
-# Launch
+# Render Deployment Entry Point
 # -----------------------------
 if __name__ == "__main__":
-    demo.launch(server_name="127.0.0.1", server_port=7860)
-else:
-    demo.launch()
+    port = int(os.environ.get("PORT", 7860))  # Required for Render to detect the port
+    demo.launch(server_name="0.0.0.0", server_port=port)
