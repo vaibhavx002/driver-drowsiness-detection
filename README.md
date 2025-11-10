@@ -1,18 +1,15 @@
-# 🚗 Driver Drowsiness Detection (Web App)
+# 🚗 Driver Drowsiness Detection
 
-This project detects driver drowsiness in real-time using **OpenCV**, **dlib**, and **Gradio**.
+A real-time AI-based **Driver Drowsiness Detection System** that monitors eye activity and alerts when the driver becomes drowsy or falls asleep.
 
-## ⚙️ Features
+## 🧠 Features
 - Real-time eye-blink and drowsiness detection
-- Uses webcam live feed
-- Auto-downloads dlib facial landmark model
-- Deployable on Render or Hugging Face
+- Live webcam monitoring using OpenCV + dlib
+- Three states: **Awake 😃**, **Drowsy 💤**, **Sleeping 😴**
+- Automatic model download (68 facial landmarks)
+- Lightweight and deployable on Hugging Face or Render
 
-## 🚀 Deployment
-This app is deployable on:
-- Render (recommended)
-- Hugging Face Spaces
-- Localhost (`python app.py`)
-
-## 👨‍💻 Author
-**Vaibhav** — Machine Learning & Computer Vision Enthusiast.
+## 🚀 Run Locally
+```bash
+pip install -r requirements.txt
+python app.py
