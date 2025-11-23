@@ -155,8 +155,10 @@ python main.py
 
 
 ```
-![Screenshot](assets/screenshot1.png)
-![Alert](assets/screenshot_alert.png)
+![Screenshot](assets/Screenshot1.png)
+![Screenshot](assets/Screenshot2.png)
+![Screenshot](assets/Screenshot3.png)
+![Screenshot](assets/Screenshot4.png)
 ```
 
 ---
