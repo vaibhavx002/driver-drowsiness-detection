@@ -90,8 +90,8 @@ DrowsyGuard/
 ### 1️⃣ Clone repo
 
 ```bash
-git clone https://github.com/yourusername/DrowsyGuard
-cd DrowsyGuard
+git clone https://github.com/vaibhavx002/driver-drowsiness-detection
+cd driver-drowsiness-detection
 ```
 
 ### 2️⃣ Create virtual environment
@@ -152,7 +152,7 @@ python main.py
 
 ## 📸 Screenshots
 
-(Add yours here after uploading)
+
 
 ```
 ![Screenshot](assets/screenshot1.png)
@@ -182,7 +182,7 @@ MIT License © 2025
 If you like this project, please ⭐ star the repo!
 
 ```
-LinkedIn: [https://www.linkedin.com/in/vaibhavx002/]
+LinkedIn: https://www.linkedin.com/in/vaibhavx002/
 ```
 
 ---
