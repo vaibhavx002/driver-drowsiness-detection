@@ -1,0 +1,51 @@
+/* CLEAN DARK BACKGROUND */
+QWidget {
+    background: #090a0c;
+    color: #ededed;
+    font-family: "Segoe UI", "Roboto", Arial, sans-serif;
+}
+
+/* Overlay Label (neutral white when normal) */
+#overlay {
+    color: #f5f5f5;
+    font-weight: 700;
+    text-shadow: 0px 0px 4px rgba(255,120,40,0.4);
+}
+
+/* Drowsy Alert (fire orange) */
+#overlay.drowsy {
+    color: #ff6a3a;
+    text-shadow: 0px 0px 14px rgba(255,80,30,0.8);
+}
+
+/* No-Face Alert (gold tint) */
+#overlay.noface {
+    color: #ffd76b;
+    text-shadow: 0px 0px 12px rgba(255,160,40,0.7);
+}
+
+/* Buttons */
+QPushButton {
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+QPushButton:hover {
+    background: rgba(255,255,255,0.08);
+}
+
+/* Sliders */
+QSlider::groove:horizontal {
+    height: 6px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 3px;
+}
+
+QSlider::handle:horizontal {
+    width: 18px;
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
+        stop:0 #ff8b5e,
+        stop:1 #ff5620);
+    border-radius: 9px;
+    margin: -6px 0;
+}
