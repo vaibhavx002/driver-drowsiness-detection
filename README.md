@@ -154,12 +154,7 @@ python main.py
 
 
 
-```
-![Screenshot](assets/Screenshot1.png)
-![Screenshot](assets/Screenshot2.png)
-![Screenshot](assets/Screenshot3.png)
-![Screenshot](assets/Screenshot4.png)
-```
+<p align="center"> <img src="assets/Screenshot1.png" width="700"><br><br> <img src="assets/Screenshot2.png" width="700"><br><br> <img src="assets/Screenshot3.png" width="700"><br><br> <img src="assets/Screenshot4.png" width="700"> </p>
 
 ---
 
